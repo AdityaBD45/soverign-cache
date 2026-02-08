@@ -11,9 +11,9 @@
     "**/*.ts",
     "**/*.tsx",
     "next-env.d.ts",
-    "next.config.js",
+    "next.config.mjs",
     ".next/types/**/*.ts"
-  ],
+, "cache-handler.mts", "app/lib/redis.js"  ],
   "exclude": [
     "node_modules"
   ]
