@@ -1,0 +1,20 @@
+{
+  "name": "@adityabd/sovereign-cache-handler",
+  "version": "0.1.0",
+  "description": "Redis-backed cache handler for Next.js fetch cache with tag-based invalidation and namespace isolation.",
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "keywords": [
+    "nextjs",
+    "cache",
+    "redis",
+    "revalidateTag",
+    "fetch",
+    "tag",
+    "saas"
+  ],
+  "license": "MIT"
+}

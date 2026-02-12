@@ -6,7 +6,10 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  cacheHandler: path.join(__dirname, "cache-handler.mjs"),
+  cacheHandler: path.join(
+    __dirname,
+    "./cache-handler.mjs"
+  ),
 };
 
 export default nextConfig;

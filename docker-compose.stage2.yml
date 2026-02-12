@@ -1,0 +1,51 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sovereign-redis
+    ports:
+      - "6379:6379"
+
+  web1:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SOVEREIGN_LOGS=true
+      - "SOVEREIGN_PREFIX=sc:v1:"
+    depends_on:
+      - redis
+
+  web2:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SOVEREIGN_LOGS=true
+      - "SOVEREIGN_PREFIX=sc:v1:"
+    depends_on:
+      - redis
+
+  web3:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - SOVEREIGN_LOGS=true
+      - "SOVEREIGN_PREFIX=sc:v1:"
+    depends_on:
+      - redis
+
+  nginx:
+    image: nginx:alpine
+    container_name: sovereign-nginx
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web1
+      - web2
+      - web3

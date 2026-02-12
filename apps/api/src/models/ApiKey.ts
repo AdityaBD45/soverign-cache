@@ -1,0 +1,29 @@
+import mongoose, { Schema, models, model } from "mongoose";
+
+export interface ApiKeyDoc extends mongoose.Document {
+  namespaceId: mongoose.Types.ObjectId;
+  keyPrefix: string;
+  keyHash: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ApiKeySchema = new Schema<ApiKeyDoc>(
+  {
+    namespaceId: {
+      type: Schema.Types.ObjectId,
+      ref: "Namespace",
+      required: true,
+    },
+
+    keyPrefix: { type: String, required: true },
+    keyHash: { type: String, required: true },
+
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+export const ApiKey =
+  models.ApiKey || model<ApiKeyDoc>("ApiKey", ApiKeySchema);

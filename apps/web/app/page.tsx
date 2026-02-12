@@ -1,15 +1,15 @@
-import { ensureRedisConnected, redis } from "./lib/redis";
 
-export default async function Home() {
-  await ensureRedisConnected();
 
-  await redis.set("hello", "world");
-  const val = await redis.get("hello");
+export default  function Home() {
+ 
+
+  
+  
 
   return (
     <main style={{ padding: 30 }}>
-      <h1>Redis Test</h1>
-      <p>{val}</p>
+      <h1>Home</h1>
+      <p>hi</p>
     </main>
   );
 }
