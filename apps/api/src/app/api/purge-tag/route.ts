@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { requireApiKey } from "@/app/lib/auth";
-import { redis } from "@/app/lib/redis";
 import { connectDB } from "@/app/lib/db";
 import { PurgeLog } from "@/models/PurgeLog";
-import { rateLimitOrThrow } from "@/app/lib/rateLimit";
+import { getRedisClientFromNamespace } from "@/app/lib/redisClients";
 
 export async function POST(req: Request) {
   try {
     const { namespace, apiKey } = await requireApiKey(req);
 
-    // 🚦 Rate limit (30 req/min)
-    await rateLimitOrThrow(apiKey._id.toString());
 
     const body = await req.json();
     const { tag } = body;
@@ -19,6 +16,9 @@ export async function POST(req: Request) {
     if (!tag) {
       return NextResponse.json({ error: "tag is required" }, { status: 400 });
     }
+
+    // ✅ Get correct redis for THIS namespace (BYO Redis)
+    const redis = getRedisClientFromNamespace(namespace);
 
     // sc:tag:v1:<namespace>:<tag>
     const tagSetKey = `sc:tag:v1:${namespace.slug}:${tag}`;

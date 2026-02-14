@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { connectDB } from "@/app/lib/db";
 import { Namespace } from "@/models/Namespace";
 import { ApiKey } from "@/models/ApiKey";
+import { encryptRedisUrl } from "@/app/lib/crypto";
 
 function generateApiKey() {
   const random = crypto.randomBytes(32).toString("hex");
@@ -30,18 +31,28 @@ export async function POST(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const { namespaceName, namespaceSlug } = body;
+    const { namespaceName, namespaceSlug, redisUrl } = body;
 
-    if (!namespaceName || !namespaceSlug) {
+    if (!namespaceName || !namespaceSlug || !redisUrl) {
       return NextResponse.json(
-        { error: "namespaceName and namespaceSlug are required" },
+        { error: "namespaceName, namespaceSlug and redisUrl are required" },
         { status: 400 }
       );
     }
 
+    // ✅ Encrypt redisUrl before storing
+    const encrypted = encryptRedisUrl(redisUrl);
+
     const namespace = await Namespace.findOneAndUpdate(
       { slug: namespaceSlug },
-      { name: namespaceName, slug: namespaceSlug },
+      {
+        name: namespaceName,
+        slug: namespaceSlug,
+
+        redisUrlEnc: encrypted.enc,
+        redisUrlIv: encrypted.iv,
+        redisUrlTag: encrypted.tag,
+      },
       { upsert: true, new: true }
     );
 
@@ -64,6 +75,10 @@ export async function POST(req: Request) {
       keyHash,
       isActive: true,
     });
+
+    // ⚠️ IMPORTANT:
+    // Never return redisUrl (even encrypted) back in response
+    // Only return rawKey once.
 
     return NextResponse.json({
       success: true,
