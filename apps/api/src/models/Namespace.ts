@@ -1,6 +1,8 @@
 import mongoose, { Schema, models, model } from "mongoose";
 
 export interface NamespaceDoc extends mongoose.Document {
+  ownerUserId: string; // ✅ Clerk userId
+
   name: string;
   slug: string;
 
@@ -15,10 +17,11 @@ export interface NamespaceDoc extends mongoose.Document {
 
 const NamespaceSchema = new Schema<NamespaceDoc>(
   {
+    ownerUserId: { type: String, required: true, index: true }, // ✅ NEW
+
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
 
-    // ✅ AES-256-GCM encrypted redisUrl
     redisUrlEnc: { type: String, required: true },
     redisUrlIv: { type: String, required: true },
     redisUrlTag: { type: String, required: true },

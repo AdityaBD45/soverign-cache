@@ -1,25 +1,43 @@
 import { NextResponse } from "next/server";
 
-import { requireApiKey } from "@/app/lib/auth";
 import { connectDB } from "@/app/lib/db";
+import { Namespace } from "@/models/Namespace";
 import { PurgeLog } from "@/models/PurgeLog";
+import { getAuthUserOrThrow } from "@/app/lib/clerkRole";
 import { getRedisClientFromNamespace } from "@/app/lib/redisClients";
 
 export async function POST(req: Request) {
   try {
-    const { namespace, apiKey } = await requireApiKey(req);
+    const { userId, role } = await getAuthUserOrThrow();
+
+    await connectDB();
 
     const body = await req.json();
-    const { tag } = body;
+    const { namespaceId, tag } = body;
 
-    if (!tag) {
-      return NextResponse.json({ error: "tag is required" }, { status: 400 });
+    if (!namespaceId || !tag) {
+      return NextResponse.json(
+        { error: "namespaceId and tag are required" },
+        { status: 400 }
+      );
     }
 
-    // ✅ Get correct redis for THIS namespace (BYO Redis)
+    const namespace = await Namespace.findById(namespaceId);
+
+    if (!namespace) {
+      return NextResponse.json(
+        { error: "Namespace not found" },
+        { status: 404 }
+      );
+    }
+
+    // 🔒 Ownership check
+    if (role !== "admin" && namespace.ownerUserId !== userId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const redis = getRedisClientFromNamespace(namespace);
 
-    // sc:tag:v1:<namespace>:<tag>
     const tagSetKey = `sc:tag:v1:${namespace.slug}:${tag}`;
 
     const keys = await redis.smembers(tagSetKey);
@@ -30,11 +48,9 @@ export async function POST(req: Request) {
 
     await redis.del(tagSetKey);
 
-    await connectDB();
     await PurgeLog.create({
-      ownerUserId: namespace.ownerUserId, // ✅ NEW (important)
+      ownerUserId: namespace.ownerUserId,
       namespaceId: namespace._id,
-      apiKeyId: apiKey._id,
       action: "PURGE_TAG",
       value: tag,
       status: "SUCCESS",
@@ -48,18 +64,9 @@ export async function POST(req: Request) {
       deletedKeys: keys.length,
     });
   } catch (err: any) {
-    const msg = err?.message || "Something went wrong";
-
-    // 🔒 auth errors
-    if (
-      msg.toLowerCase().includes("authorization") ||
-      msg.toLowerCase().includes("api key") ||
-      msg.toLowerCase().includes("unauthorized")
-    ) {
-      return NextResponse.json({ error: msg }, { status: 401 });
-    }
-
-    // 💥 fallback
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Something went wrong" },
+      { status: 500 }
+    );
   }
 }

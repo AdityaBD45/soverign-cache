@@ -4,6 +4,8 @@ export type PurgeAction = "PURGE_TAG" | "PURGE_KEY";
 export type PurgeStatus = "SUCCESS" | "FAILED";
 
 export interface PurgeLogDoc extends mongoose.Document {
+  ownerUserId: string; // ✅ Clerk userId
+
   namespaceId: mongoose.Types.ObjectId;
   apiKeyId?: mongoose.Types.ObjectId;
 
@@ -18,16 +20,20 @@ export interface PurgeLogDoc extends mongoose.Document {
 
 const PurgeLogSchema = new Schema<PurgeLogDoc>(
   {
+    ownerUserId: { type: String, required: true, index: true }, // ✅ NEW
+
     namespaceId: {
       type: Schema.Types.ObjectId,
       ref: "Namespace",
       required: true,
+      index: true,
     },
 
     apiKeyId: {
       type: Schema.Types.ObjectId,
       ref: "ApiKey",
       required: false,
+      index: true,
     },
 
     action: { type: String, required: true },

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
+import { auth } from "@clerk/nextjs/server";
+
 import { connectDB } from "@/app/lib/db";
 import { Namespace } from "@/models/Namespace";
 import { ApiKey } from "@/models/ApiKey";
@@ -14,17 +16,10 @@ function generateApiKey() {
 
 export async function POST(req: Request) {
   try {
-    // ✅ Stage 5 Security: Protect this admin route
-    const adminSecret = req.headers.get("x-admin-secret");
+    // ✅ Clerk Auth
+    const { userId } = await auth();
 
-    if (!process.env.ADMIN_SECRET) {
-      return NextResponse.json(
-        { error: "ADMIN_SECRET missing in env" },
-        { status: 500 }
-      );
-    }
-
-    if (adminSecret !== process.env.ADMIN_SECRET) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -43,18 +38,16 @@ export async function POST(req: Request) {
     // ✅ Encrypt redisUrl before storing
     const encrypted = encryptRedisUrl(redisUrl);
 
-    const namespace = await Namespace.findOneAndUpdate(
-      { slug: namespaceSlug },
-      {
-        name: namespaceName,
-        slug: namespaceSlug,
+    // ✅ Create namespace (unique per user)
+    const namespace = await Namespace.create({
+      ownerUserId: userId,
+      name: namespaceName,
+      slug: namespaceSlug,
 
-        redisUrlEnc: encrypted.enc,
-        redisUrlIv: encrypted.iv,
-        redisUrlTag: encrypted.tag,
-      },
-      { upsert: true, new: true }
-    );
+      redisUrlEnc: encrypted.enc,
+      redisUrlIv: encrypted.iv,
+      redisUrlTag: encrypted.tag,
+    });
 
     const rawKey = generateApiKey();
     const keyPrefix = rawKey.slice(0, 12);
@@ -70,15 +63,12 @@ export async function POST(req: Request) {
     const keyHash = await bcrypt.hash(rawKey + pepper, 12);
 
     const apiKey = await ApiKey.create({
+      ownerUserId: userId, // ✅ NEW
       namespaceId: namespace._id,
       keyPrefix,
       keyHash,
       isActive: true,
     });
-
-    // ⚠️ IMPORTANT:
-    // Never return redisUrl (even encrypted) back in response
-    // Only return rawKey once.
 
     return NextResponse.json({
       success: true,
@@ -94,6 +84,14 @@ export async function POST(req: Request) {
       },
     });
   } catch (err: any) {
+    // duplicate slug
+    if (err?.code === 11000) {
+      return NextResponse.json(
+        { error: "Namespace slug already exists" },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: err.message || "Something went wrong" },
       { status: 500 }

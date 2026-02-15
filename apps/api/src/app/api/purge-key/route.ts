@@ -9,8 +9,6 @@ export async function POST(req: Request) {
   try {
     const { namespace, apiKey } = await requireApiKey(req);
 
-
-
     const body = await req.json();
     const { key } = body;
 
@@ -28,6 +26,7 @@ export async function POST(req: Request) {
 
     await connectDB();
     await PurgeLog.create({
+      ownerUserId: namespace.ownerUserId, // ✅ NEW (important)
       namespaceId: namespace._id,
       apiKeyId: apiKey._id,
       action: "PURGE_KEY",
@@ -44,11 +43,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     const msg = err?.message || "Something went wrong";
-
-    // 🚦 rate limit
-    if (msg.toLowerCase().includes("rate limit")) {
-      return NextResponse.json({ error: msg }, { status: 429 });
-    }
 
     // 🔒 auth errors
     if (

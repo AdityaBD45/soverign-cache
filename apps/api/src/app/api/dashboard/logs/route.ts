@@ -1,24 +1,24 @@
 import { NextResponse } from "next/server";
-import { requireApiKey } from "@/app/lib/auth";
+
 import { connectDB } from "@/app/lib/db";
 import { PurgeLog } from "@/models/PurgeLog";
+import { getAuthUserOrThrow } from "@/app/lib/clerkRole";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { namespace } = await requireApiKey(req);
+    const { userId, role } = await getAuthUserOrThrow();
 
     await connectDB();
 
-    const logs = await PurgeLog.find({
-      namespaceId: namespace._id,
-      ownerUserId: namespace.ownerUserId, // ✅ NEW safety filter
-    })
+    const filter = role === "admin" ? {} : { ownerUserId: userId };
+
+    const logs = await PurgeLog.find(filter)
       .sort({ createdAt: -1 })
       .limit(50);
 
     return NextResponse.json({
       success: true,
-      namespace: namespace.slug,
+      role,
       count: logs.length,
       logs,
     });
