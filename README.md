@@ -63,7 +63,7 @@ Dashboard pages:
 
 ## 🚀 Quick Start (for users)
 
-### 1) Install the cache handler
+### 1) Install the cache handler and Redis
 ```bash
 npm i @adityabd/sovereign-cache-handler redis
 ```
@@ -140,6 +140,7 @@ http://localhost:3000/api/test
 Refresh multiple times — generatedAt should stay the same (cached).
 
 #### ✅ Done 🎉
+
 • Responses are cached in Redis
 • Tags are tracked
 • TTL works
@@ -148,6 +149,8 @@ Refresh multiple times — generatedAt should stay the same (cached).
 ---
 
 Next step(if u want to purge data): go to Purge in the sidebar to purge cache instantly by tag/key.
+
+---
 
 #### 🗑️ Purging cache 
 ✅ Purge from Dashboard UI
